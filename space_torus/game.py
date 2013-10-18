@@ -191,6 +191,10 @@ class Applet(pyglet.window.Window):
                 self.speed += 10
             elif symbol == key.NUM_DIVIDE:
                 self.speed -= 10
+            elif symbol == key.PAGEUP:
+                self.speed += 100
+            elif symbol == key.PAGEDOWN:
+                self.speed -= 100
             elif symbol == key.I:
                 self.info = not self.info
             elif symbol == key.D:
@@ -276,6 +280,7 @@ class Applet(pyglet.window.Window):
             # This is such a nasty hack. I don't even want to talk about it.
             # Check back later when I've actually added an atmosphere node in the YAML.
             if hasattr(entity, "atmosphere") and entity.atmosphere:
+                glEnable(GL_BLEND)
                 glPushMatrix()
                 x0, y0, z0 = 0, 0, 2 * TORUS_DISTANCE * TORI_COUNT
                 x1, y1, z1 = self.cam.x, self.cam.y, self.cam.z
@@ -292,6 +297,7 @@ class Applet(pyglet.window.Window):
                 glRotatef(roll, 0, 0, 1)
                 glCallList(entity.atmosphere)
                 glPopMatrix()
+                glDisable(GL_BLEND)
 
         glColor4f(1, 1, 1, 1)
         glDisable(GL_TEXTURE_2D)

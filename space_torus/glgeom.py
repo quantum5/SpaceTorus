@@ -72,7 +72,7 @@ def disk(rinner, router, segs, tex):
     glDisable(GL_TEXTURE_2D)
 
 
-def sphere(r, lats, longs, tex, lighting=True):
+def sphere(r, lats, longs, tex, lighting=True, fv4=GLfloat * 4):
     '''
         Sphere function from the OpenGL red book.
     '''
@@ -85,8 +85,8 @@ def sphere(r, lats, longs, tex, lighting=True):
     glDisable(GL_BLEND)
     glEnable(GL_TEXTURE_2D)
     if lighting:
-        glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, (GLfloat * 4)(1, 1, 1, 0))
-        glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, (GLfloat * 4)(1, 1, 1, 0))
+        glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, fv4(1, 1, 1, 0))
+        glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, fv4(1, 1, 1, 0))
         glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 125)
     else:
         glDisable(GL_LIGHTING)
@@ -101,13 +101,13 @@ def sphere(r, lats, longs, tex, lighting=True):
     gluDeleteQuadric(sphere)
 
 
-def torus(major_radius, minor_radius, n_major, n_minor, material, shininess=125):
+def torus(major_radius, minor_radius, n_major, n_minor, material, shininess=125, fv4=GLfloat * 4):
     '''
         Torus function from the OpenGL red book.
     '''
     glPushAttrib(GL_CURRENT_BIT)
     glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, material)
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, (GLfloat * 4)(1, 1, 1, 1))
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, fv4(1, 1, 1, 1))
     glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, shininess)
 
     major_s = TWOPI / n_major
