@@ -1,4 +1,5 @@
 from bisect import bisect_left
+from collections import OrderedDict
 from operator import itemgetter
 import hashlib
 import os.path
@@ -7,7 +8,6 @@ import json
 
 from glgeom import *
 from entity import *
-from texture import *
 
 
 TORUS_DISTANCE = 20
@@ -17,7 +17,7 @@ AU = TORUS_DISTANCE * 100
 def load_world(file):
     with open(os.path.join(os.path.dirname(__file__), file)) as f:
         world = World()
-        root = json.load(f)
+        root = json.load(f, object_pairs_hook=OrderedDict)
 
         e = lambda x: eval(str(x), {'__builtins__': None}, {'AU': AU})
 
@@ -33,6 +33,8 @@ def load_world(file):
             return default
 
         for planet in root['planets']:
+            if planet == 'sky':
+                continue
             print "Loading %s." % planet
             info = root['planets'][planet]
 
