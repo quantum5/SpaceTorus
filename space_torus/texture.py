@@ -14,7 +14,7 @@ def load_texture(file, safe=False):
 
     import os.path
 
-    raw = image.load(os.path.join(os.path.dirname(__file__), "assets", "textures", file))
+    raw = image.load(os.path.join(os.path.dirname(__file__), "assets", "textures", file.replace('.jpg', '_small.jpg')))
 
     width, height = raw.width, raw.height
 

@@ -1,0 +1,350 @@
+from libc.string cimport strcmp
+from libc.stdlib cimport malloc, free, atof
+from libc.stdio cimport fopen, fclose, fgets, FILE
+cimport cython
+
+from texture import load_texture
+include "_cyopengl.pxi"
+from uuid import uuid4
+import os
+
+cdef enum:
+    FACE_TRIANGLES
+    FACE_QUADS
+
+cdef class Face(object):
+    cdef public int type
+    cdef public list verts, norms, texs, vertices, normals, textures
+    
+    def __init__(self, int type, list verts, list norms, list texs,
+                 list vertices, list normals, list textures):
+        self.type = type
+        self.verts = verts
+        self.norms = norms
+        self.texs = texs
+        self.vertices = vertices
+        self.normals = normals
+        self.textures = textures
+
+cdef class Material(object):
+    cdef public str name, texture
+    cdef public tuple Ka, Kd, Ks
+    cdef public double shininess
+    
+    def __init__(self, str name, str texture=None, tuple Ka=(0, 0, 0),
+                 tuple Kd=(0, 0, 0), tuple Ks=(0, 0, 0), double shininess=0.0):
+        self.name = name
+        self.texture = texture
+        self.Ka = Ka
+        self.Kd = Kd
+        self.Ks = Ks
+        self.shininess = shininess
+
+cdef class Group(object):
+    cdef public str name
+    cdef public tuple min
+    cdef public Material material
+    cdef public list faces, indices, vertices, normals, textures
+    cdef public int idx_count
+    
+    def __init__(self, str name=None):
+        if name is None:
+            self.name = str(uuid4())
+        else:
+            self.name = name
+        self.min = ()
+        self.material = None
+        self.faces = []
+        self.indices = []
+        self.vertices = []
+        self.normals = []
+        self.textures = []
+        self.idx_count = 0
+
+    def pack(self):
+        min_x, min_y, min_z = 0, 0, 0
+        for face in self.faces:
+            for x, y, z in face.vertices:
+                min_x = max(min_x, abs(x))
+                min_y = max(min_y, abs(y))
+                min_z = max(min_x, abs(z))
+        self.min = (min_x, min_y, min_z)
+
+cdef class WavefrontObject(object):
+    cdef str root
+    cdef public list vertices, normals, textures, groups
+    cdef public dict materials
+    cdef str path
+    cdef Material current_material
+    cdef Group current_group
+    def __init__(self, str path):
+        self.path = path
+        self.root = os.path.dirname(path)
+        self.vertices = []
+        self.normals = []
+        self.textures = []
+        self.groups = []
+        self.materials = {}
+        
+        self.perform_io(self.path)
+    
+    cdef void new_material(self, list words):
+        material = Material(words[1])
+        self.materials[words[1]] = material
+        self.current_material = material
+    
+    cdef void Ka(self, list words):
+        self.current_material.Ka = (float(words[1]), float(words[2]), float(words[3]))
+    
+    cdef void Kd(self, list words):
+        self.current_material.Kd = (float(words[1]), float(words[2]), float(words[3]))
+    
+    cdef void Ks(self, list words):
+        self.current_material.Ks = (float(words[1]), float(words[2]), float(words[3]))
+    
+    cdef void material_shininess(self, list words):
+        self.current_material.shininess = min(float(words[1]), 125)
+    
+    cdef void material_texture(self, list words):
+        self.current_material.texture = words[-1]
+    
+    @cython.nonecheck(False)
+    cdef void vertex(self, list words):
+        self.vertices.append((float(words[1]), float(words[2]), float(words[3])))
+    
+    @cython.nonecheck(False)
+    cdef void normal(self, list words):
+        self.normals.append((float(words[1]), float(words[2]), float(words[3])))
+    
+    cdef void texture(self, list words):
+        cdef int l = len(words)
+        cdef object x = 0, y = 0, z = 0
+        if l >= 2:
+            x = float(words[1])
+        if l >= 3:
+            # OBJ origin is at upper left, OpenGL origin is at lower left
+            y = 1 - float(words[2])
+        if l >= 4:
+            z = float(words[3])
+        self.textures.append((x, y, z))
+    
+    cdef void face(self, list words):
+        cdef int l = len(words)
+        cdef int type = -1
+        cdef int vertex_count = l - 1
+        cdef list face_vertices = [], face_normals = [], face_textures = []
+
+        if vertex_count == 3:
+            type = FACE_TRIANGLES
+        else:
+            type = FACE_QUADS
+
+        cdef int current_value = -1
+        cdef list raw_faces, vindices = [], nindices = [], tindices = []
+
+        for i in xrange(1, vertex_count + 1):
+            raw_faces = words[i].split('/')
+            l = len(raw_faces)
+
+            current_value = int(raw_faces[0])
+            vindices.append(current_value - 1)
+            face_vertices.append(self.vertices[current_value - 1])
+
+            if l == 1:
+                continue
+            if l >= 2 and raw_faces[1]:
+                current_value = int(raw_faces[1])
+                if current_value <= len(self.textures):
+                    tindices.append(current_value - 1)
+                    face_textures.append(self.textures[current_value - 1])
+            if l >= 3 and raw_faces[2]:
+                current_value = int(raw_faces[2])
+                nindices.append(current_value - 1)
+                face_normals.append(self.normals[current_value - 1])
+
+        cdef Group group
+        if self.current_group is None:
+            self.current_group = group = Group()
+            self.groups.append(group)
+        else:
+            group = self.current_group
+
+        group.vertices += face_vertices
+        group.normals += face_normals
+        group.textures += face_textures
+        idx_count = group.idx_count
+        group.indices += (idx_count + 1, idx_count + 2, idx_count + 3)
+        group.idx_count += 3
+
+        group.faces.append(Face(type, vindices, nindices, tindices, face_vertices, face_normals, face_textures))
+
+    cdef void material(self, list words):
+        self.perform_io(os.path.join(self.root, words[1]))
+        
+    cdef void use_material(self, list words):
+        mat = words[1]
+        try:
+            self.current_group.material = self.materials[mat]
+        except KeyError:
+            print "Warning: material %s undefined, only %s defined." % (mat, self.materials)
+        except AttributeError:
+            print "Warning: no group"
+
+    cdef void group(self, list words):
+        name = words[1]
+        group = Group(name)
+
+        if self.groups:
+            self.current_group.pack()
+        self.groups.append(group)
+        self.current_group = group
+
+    cdef inline void perform_io(self, str file):
+        mbcsfile = file.encode('mbcs')
+        cdef char* fname = mbcsfile
+    
+        cdef FILE* cfile
+        cfile = fopen(fname, 'rb')
+        if cfile == NULL:
+            raise IOError(2, "No such file or directory: '%s'" % file)
+    
+        cdef size_t bufsize = 2048
+        cdef char *buf = <char*>malloc(bufsize)
+        cdef ssize_t read
+        cdef char *type
+        cdef list words
+     
+        while fgets(buf, bufsize, cfile):
+            if buf[0] in (0, 10, 13, 35):
+                continue # Empty or comment
+            words = buf.split()
+            try:
+                type = words[0]
+            except IndexError:
+                print words, `buf`, buf[0]
+                raise
+            
+            if strcmp(type, b'v') == 0:
+                self.vertex(words)
+            elif strcmp(type, b'vn') == 0:
+                self.normal(words)
+            elif strcmp(type, b'vt') == 0:
+                self.texture(words)
+            elif strcmp(type, b'f') == 0:
+                self.face(words)
+            elif strcmp(type, b'mtllib') == 0:
+                self.material(words)
+            elif strcmp(type, b'usemtl') == 0:
+                self.use_material(words)
+            elif strcmp(type, b'g') == 0:
+                self.group(words)
+            elif strcmp(type, b'o') == 0: # TODO: o is not really g
+                self.group(words)
+            elif strcmp(type, b'newmtl') == 0:
+                self.new_material(words)
+            elif strcmp(type, b'Ka') == 0:
+                self.Ka(words)
+            elif strcmp(type, b'Kd') == 0:
+                self.Kd(words)
+            elif strcmp(type, b'Ks') == 0:
+                self.Ks(words)
+            elif strcmp(type, b'Ns') == 0:
+                self.material_shininess(words)
+            elif strcmp(type, b'map_Kd') == 0:
+                self.material_texture(words)
+        free(buf)
+        fclose(cfile)
+
+def load_model(path):
+    path = os.path.join(os.path.dirname(__file__), 'assets', 'models', path)
+    return WavefrontObject(path)
+
+cdef point(Face f, object vertices, object normals, object textures, int tex_id, int sx, int sy, int sz, int n):
+    cdef int x, y, z
+    cdef object normal, texture
+    if f.norms:
+        normal = normals[f.norms[n]]
+        glNormal3f(normal[0], normal[1], normal[2])
+    if tex_id:
+        texture = textures[f.texs[n]]
+        glTexCoord2f(texture[0], texture[1])
+
+    x, y, z = vertices[f.verts[n]]
+    glVertex3f(x * sx, y * sy, z * sz)
+
+cpdef model_list(WavefrontObject model, int sx=1, int sy=1, int sz=1, object rotation=(0, 0, 0)):
+    for m, text in model.materials.iteritems():
+        if text.texture:
+            load_texture(os.path.join(model.root, text.texture))
+
+    display = glGenLists(1)
+
+    glNewList(display, GL_COMPILE)
+    glPushMatrix()
+    glPushAttrib(GL_CURRENT_BIT)
+
+    cdef float pitch, yaw, roll
+    cdef float kx, ky, kz
+    
+    pitch, yaw, roll = rotation
+    glPushAttrib(GL_TRANSFORM_BIT)
+    glRotatef(pitch, 1, 0, 0)
+    glRotatef(yaw, 0, 1, 0)
+    glRotatef(roll, 0, 0, 1)
+    glPopAttrib()
+
+    vertices = model.vertices
+    textures = model.textures
+    normals = model.normals
+    cdef GLfloat ka[4]
+    cdef Face f
+    cdef Group g
+    cdef int tex_id
+    cdef str name
+    cdef Material material
+
+    for g in model.groups:
+        name = g.name
+        material = g.material
+
+        tex_id = load_texture(os.path.join(model.root, material.texture)) if (material and material.texture) else 0
+
+        if tex_id:
+            glEnable(GL_TEXTURE_2D)
+            glBindTexture(GL_TEXTURE_2D, tex_id)
+        else:
+            glBindTexture(GL_TEXTURE_2D, 0)
+            glDisable(GL_TEXTURE_2D)
+
+        if material:
+            if material.Ka:
+                kx, ky, kz = material.Ka
+                ka[:] = [kx, ky, kz, 1]
+                glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ka)
+            if material.Kd:
+                kx, ky, kz = material.Kd
+                ka[:] = [kx, ky, kz, 1]
+                glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, ka)
+            if material.Ks:
+                kx, ky, kz = material.Ks
+                ka[:] = [kx, ky, kz, 1]
+                glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, ka)
+            glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, material.shininess)
+
+        glBegin(GL_TRIANGLES)
+        for f in g.faces:
+            point(f, vertices, normals, textures, tex_id, sx, sy, sz, 0)
+            point(f, vertices, normals, textures, tex_id, sx, sy, sz, 1)
+            point(f, vertices, normals, textures, tex_id, sx, sy, sz, 2)
+
+            if f.type == FACE_QUADS:
+                point(f, vertices, normals, textures, tex_id, sx, sy, sz, 2)
+                point(f, vertices, normals, textures, tex_id, sx, sy, sz, 3)
+                point(f, vertices, normals, textures, tex_id, sx, sy, sz, 0)
+        glEnd()
+
+    glPopAttrib()
+    glPopMatrix()
+
+    glEndList()
+    return display

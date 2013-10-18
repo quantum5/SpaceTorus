@@ -1,7 +1,7 @@
 from math import *
 
 
-class Camera:
+class Camera(object):
     def __init__(self, x=0, y=0, z=0, pitch=0, yaw=0, roll=0):
         self.x = x
         self.y = y
@@ -11,14 +11,20 @@ class Camera:
         self.roll = roll
 
     def move(self, dx, dy, dz):
-        self.z += dx * cos(radians(self.yaw - 90)) + dz * cos(radians(self.yaw))
-        self.x -= dx * sin(radians(self.yaw - 90)) + dz * sin(radians(self.yaw))
-        self.y += dy * sin(radians(self.pitch - 90)) + dz * sin(radians(self.pitch))
+        pitch = self.pitch
+        yaw = self.yaw
+        if pitch > 90 or pitch < -90:
+            pitch = -pitch
+            dx = -dx
+            dy = -dy
+            dz = -dz
+        self.z += dx * cos(radians(yaw - 90)) + dz * cos(radians(yaw))
+        self.x -= dx * sin(radians(yaw - 90)) + dz * sin(radians(yaw))
+        self.y += dy * sin(radians(pitch - 90)) + dz * sin(radians(pitch))
 
     def mouse_move(self, dx, dy):
-        MAX_LOOK_UP = 90
-        MAX_LOOK_DOWN = -90
-
+        if self.pitch > 90 or self.pitch < -90:
+            dx = -dx
         if self.yaw + dx >= 360:
             self.yaw = self.yaw + dx - 360
         elif self.yaw + dx < 0:
@@ -26,12 +32,11 @@ class Camera:
         else:
             self.yaw += dx
 
-        if MAX_LOOK_DOWN <= dy - self.pitch - dy <= MAX_LOOK_UP:
-            self.pitch += -dy
-        elif self.pitch - dy < MAX_LOOK_DOWN:
-            self.pitch = MAX_LOOK_DOWN
-        elif self.pitch - dy > MAX_LOOK_UP:
-            self.pitch = MAX_LOOK_UP
+        self.pitch -= dy
+        if self.pitch < -180:
+            self.pitch += 360
+        elif self.pitch > 180:
+            self.pitch -= 360
 
     def direction(self):
         m = cos(radians(self.pitch))

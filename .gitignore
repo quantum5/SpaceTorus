@@ -1,4 +1,8 @@
-.idea 
+.idea
+*.obj
+*.html
+*.exp
+*.lib
 *.py[cod]
 
 # C extensions
