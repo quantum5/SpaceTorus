@@ -107,12 +107,12 @@ def load_texture(file, safe=False):
     except IOError:
         raise ValueError('Texture exists not')
     type, width, height = image_info(file.read(8192))
-    file.close()
+    file.seek(0, 0)
     if type:
         check_size(width, height)
 
     try:
-        raw = image.load(path)
+        raw = image.load(path, file=file)
     except IOError:
         raise ValueError('Texture exists not')
 

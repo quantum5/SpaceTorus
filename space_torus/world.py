@@ -52,6 +52,7 @@ def load_world(file):
             roll = e(get('roll', info, 0))
             delta = e(get('delta', info, 5))
             radius = e(get('radius', info))
+            safe = info.get('safe', False)
 
             cheap = False
             if isinstance(texture, list):
@@ -63,14 +64,14 @@ def load_world(file):
                             break
                         continue
                     try:
-                        texture = load_texture(item)
+                        texture = load_texture(item, safe=safe)
                     except ValueError:
                         pass
                     else:
                         break
             else:
                 try:
-                    texture = load_texture(texture)
+                    texture = load_texture(texture, safe=safe)
                 except ValueError:
                     if info.get('optional', False):
                         continue
