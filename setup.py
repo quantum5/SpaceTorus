@@ -13,11 +13,14 @@ parent = os.path.abspath(__file__ + "/../")
 join = os.path.join
 for package in site.getsitepackages():
     for f in glob(join(package, "pyglet", "media", "avbin*.dll")):
-        try:
-            data.append(("", [f]))
-        except:
-            print "Error: AVBin library not found in site-packages/pyglet/media"
-            sys.exit()
+        data.append(("", [f]))
+        break
+    else:
+        continue
+    break
+else:
+    print "Error: AVBin library not found in site-packages/pyglet/media"
+    sys.exit()
 
 resources = [(r"space_torus\assets\textures", ["*.*"]),
              (r"space_torus\assets\models\asteroids", ["*.obj", "*.mtl"]),
