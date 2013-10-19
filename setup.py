@@ -8,7 +8,7 @@ sys.argv.append("py2exe")
 
 data = []
 
-parent = os.path.join(os.path.abspath(__file__), '..')
+parent = os.path.dirname(__file__)
 join = os.path.join
 
 resources = [(r"space_torus\assets\textures", ["*.*"]),
@@ -30,8 +30,4 @@ setup(
 )
 
 os.chdir("dist")
-try:
-    os.remove("Space Torus.exe")
-except:
-    pass
-os.system('ren bootloader.exe "Space Torus.exe"')
+os.rename('bootloader.exe', 'Space Torus.exe')
