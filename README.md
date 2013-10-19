@@ -22,6 +22,7 @@ If on Windows, you may want to execute `python setup.py install`: this will gene
 * `Q`: fire meteor
 * `Numpad + and -`: speed control
 * `Numpad * and /`: greater speed control
+* `Page up` and `Page down`: maximum speed control
 * `D`: toggle debug mode (view meshes)
 * `I`: toggle information
 * `E`: escape cursor
