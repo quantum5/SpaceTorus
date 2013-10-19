@@ -12,9 +12,9 @@ except ImportError:
     except:
         print "No compatible JSON decoder found. Translation: you're fucked."
 
-from glgeom import *
-from entity import *
-
+from space_torus.glgeom import *
+from space_torus.entity import *
+from space_torus.texture import *
 
 TORUS_DISTANCE = 20
 AU = TORUS_DISTANCE * 100
@@ -39,8 +39,6 @@ def load_world(file):
             return default
 
         for planet in root['planets']:
-            if planet == 'sky':
-                continue
             print "Loading %s." % planet
             info = root['planets'][planet]
 
@@ -55,7 +53,33 @@ def load_world(file):
             delta = e(get('delta', info, 5))
             radius = e(get('radius', info))
 
-            id = compile(sphere, radius, int(radius / 2), int(radius / 2), load_texture(texture), lighting=lighting)
+            cheap = False
+            if isinstance(texture, list):
+                for item in texture:
+                    if isinstance(item, list):
+                        if len(item) == 4:
+                            cheap = True
+                            texture = item
+                            break
+                        continue
+                    try:
+                        texture = load_texture(item)
+                    except ValueError:
+                        pass
+                    else:
+                        break
+            else:
+                try:
+                    texture = load_texture(texture)
+                except ValueError:
+                    if info.get('optional', False):
+                        continue
+                    cheap = True
+                    texture = [1, 1, 1, 1]
+            if cheap:
+                id = compile(colourball, radius, int(radius / 2), int(radius / 2), texture)
+            else:
+                id = compile(sphere, radius, int(radius / 2), int(radius / 2), texture, lighting=lighting)
 
             atmosphere = 0
             if 'atmosphere' in info:

@@ -30,4 +30,8 @@ setup(
 )
 
 os.chdir("dist")
+try:
+    os.unlink('Space Torus.exe')
+except OSError:
+    pass
 os.rename('bootloader.exe', 'Space Torus.exe')

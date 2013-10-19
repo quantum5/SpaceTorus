@@ -1,8 +1,20 @@
 from pyglet import image
 from pyglet.gl import *
+from ctypes import c_int, byref
+import os.path
+
+__all__ = ['load_texture']
 
 id = 0
 cache = {}
+
+buf = c_int()
+glGetIntegerv(GL_MAX_TEXTURE_SIZE, byref(buf))
+max_texture = buf.value
+
+power_of_two = gl_info.have_version(2) or gl_info.have_extension('GL_ARB_texture_non_power_of_two')
+
+is_power2 = lambda num: num != 0 and ((num & (num - 1)) == 0)
 
 
 def load_texture(file, safe=False):
@@ -12,11 +24,19 @@ def load_texture(file, safe=False):
     id += 1
     print "Loading image %s..." % file
 
-    import os.path
 
-    raw = image.load(os.path.join(os.path.dirname(__file__), "assets", "textures", file.replace('.jpg', '_small.jpg')))
+    try:
+        raw = image.load(os.path.join(os.path.dirname(__file__), "assets", "textures", file))
+    except IOError:
+        raise ValueError('Texture exists not')
+
 
     width, height = raw.width, raw.height
+    if width > max_texture or height > max_texture:
+        raise ValueError('Texture too large')
+    elif not power_of_two:
+        if not is_power2(width) or not is_power2(height):
+            raise ValueError('Texture not power of two')
 
     mode = GL_RGBA if 'A' in raw.format else GL_RGB
     # Flip from BGR to RGB

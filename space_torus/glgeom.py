@@ -1,6 +1,6 @@
 from math import *
 from pyglet.gl import *
-from pyglet.glu import *
+from pyglet.gl.glu import *
 
 TWOPI = pi * 2
 
@@ -98,6 +98,23 @@ def sphere(r, lats, longs, tex, lighting=True, fv4=GLfloat * 4):
     glBindTexture(GL_TEXTURE_2D, 0)
     glDisable(GL_TEXTURE_2D)
     glEnable(GL_LIGHTING)
+    glEnable(GL_BLEND)
+    gluDeleteQuadric(sphere)
+
+
+def colourball(r, lats, longs, colour, lighting=True, fv4=GLfloat * 4):
+    '''
+        Sphere function from the OpenGL red book.
+    '''
+    sphere = gluNewQuadric()
+
+    glDisable(GL_BLEND)
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, fv4(*colour))
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, fv4(1, 1, 1, 1))
+    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 125)
+
+    gluSphere(sphere, r, lats, longs)
+
     glEnable(GL_BLEND)
     gluDeleteQuadric(sphere)
 
