@@ -1,5 +1,6 @@
 from math import *
-from space_torus.texture import *
+from pyglet.gl import *
+from pyglet.glu import *
 
 TWOPI = pi * 2
 
