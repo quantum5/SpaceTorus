@@ -83,7 +83,7 @@ class Applet(pyglet.window.Window):
 
                             #if not self.debug:
 
-                        #    self.overlays[hit] = 50
+                        #self.overlays[hit] = 50
                         self.missed.append(entity.location)
                     self.world.tracker.remove(entity)
 
@@ -137,17 +137,17 @@ class Applet(pyglet.window.Window):
 
         glEnable(GL_POLYGON_OFFSET_FILL)
 
-        fv = lambda *args: (GLfloat * len(args))(*args)
+        fv4 = GLfloat * 4
 
-        glLightfv(GL_LIGHT0, GL_POSITION, fv(.5, .5, 1, 0))
-        glLightfv(GL_LIGHT0, GL_SPECULAR, fv(.5, .5, 1, 1))
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, fv(1, 1, 1, 1))
-        glLightfv(GL_LIGHT1, GL_POSITION, fv(1, 0, .5, 0))
-        glLightfv(GL_LIGHT1, GL_DIFFUSE, fv(.5, .5, .5, 1))
-        glLightfv(GL_LIGHT1, GL_SPECULAR, fv(1, 1, 1, 1))
+        glLightfv(GL_LIGHT0, GL_POSITION, fv4(.5, .5, 1, 0))
+        glLightfv(GL_LIGHT0, GL_SPECULAR, fv4(.5, .5, 1, 1))
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, fv4(1, 1, 1, 1))
+        glLightfv(GL_LIGHT1, GL_POSITION, fv4(1, 0, .5, 0))
+        glLightfv(GL_LIGHT1, GL_DIFFUSE, fv4(.5, .5, .5, 1))
+        glLightfv(GL_LIGHT1, GL_SPECULAR, fv4(1, 1, 1, 1))
 
-        self.torus_id = compile(torus, 3.0, 0.25, TORUS_DETAIL ** 2, TORUS_DETAIL ** 2, fv(.07, .37, 1, 1))
-        self.cl_torus_id = compile(torus, 3.0, 0.25, TORUS_DETAIL ** 2, TORUS_DETAIL ** 2, fv(0, 1, 0))
+        self.torus_id = compile(torus, 3.0, 0.25, TORUS_DETAIL ** 2, TORUS_DETAIL ** 2, fv4(.07, .37, 1, 1))
+        self.cl_torus_id = compile(torus, 3.0, 0.25, TORUS_DETAIL ** 2, TORUS_DETAIL ** 2, fv4(0, 1, 0, 1))
 
         self.asteroid_ids = [model_list(load_model(r"asteroids\01.obj"), 5, 5, 5, (0, 0, 0)),
                              model_list(load_model(r"asteroids\02.obj"), 5, 5, 5, (0, 0, 0)),
@@ -277,8 +277,6 @@ class Applet(pyglet.window.Window):
             glPopAttrib()
             glPopMatrix()
 
-            # This is such a nasty hack. I don't even want to talk about it.
-            # Check back later when I've actually added an atmosphere node in the YAML.
             if hasattr(entity, "atmosphere") and entity.atmosphere:
                 glEnable(GL_BLEND)
                 glPushMatrix()
@@ -287,7 +285,7 @@ class Applet(pyglet.window.Window):
                 dx, dy, dz = x1 - x0, y1 - y0, z1 - z0
 
                 distance = sqrt(dz * dz + dx * dx)
-                pitch = -degrees(atan2(dy, distance))
+                pitch = -(360 - degrees(atan2(dy, distance)))
                 yaw = degrees(atan2(dx, dz))
 
                 roll = 0
@@ -315,7 +313,7 @@ class Applet(pyglet.window.Window):
                 else:
                     self.overlays[pointer] = err
 
-            progress_bar(5, 5, 10, 2, len(self.points), type=VERTICAL)
+            progress_bar(5, 5, 10, 2, min((len(self.points) / float((len(self.world.waypoints) * 100))) * 100, 100), type=VERTICAL)
 
             x, y, z = self.cam.x, self.cam.y, self.cam.z
             self.label.text = '%d FPS @ (x=%.2f, y=%.2f, z=%.2f) # %s: %s points' % (
