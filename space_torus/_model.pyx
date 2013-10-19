@@ -259,8 +259,8 @@ def load_model(path):
     path = os.path.join(os.path.dirname(__file__), 'assets', 'models', path)
     return WavefrontObject(path)
 
-cdef point(Face f, object vertices, object normals, object textures, int tex_id, int sx, int sy, int sz, int n):
-    cdef int x, y, z
+cdef point(Face f, object vertices, object normals, object textures, int tex_id, float sx, float sy, float sz, int n):
+    cdef float x, y, z
     cdef object normal, texture
     if f.norms:
         normal = normals[f.norms[n]]
@@ -272,7 +272,7 @@ cdef point(Face f, object vertices, object normals, object textures, int tex_id,
     x, y, z = vertices[f.verts[n]]
     glVertex3f(x * sx, y * sy, z * sz)
 
-cpdef model_list(WavefrontObject model, int sx=1, int sy=1, int sz=1, object rotation=(0, 0, 0)):
+cpdef model_list(WavefrontObject model, float sx=1, float sy=1, float sz=1, object rotation=(0, 0, 0)):
     for m, text in model.materials.iteritems():
         if text.texture:
             load_texture(os.path.join(model.root, text.texture))
