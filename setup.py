@@ -33,7 +33,8 @@ for res in resources:
 
 setup(
     windows=["bootloader.py"],
-    data_files=data
+    data_files=data,
+    options={'py2exe': {'optimize': 1}},
 )
 
 os.chdir("dist")
