@@ -1,5 +1,3 @@
-# cython: profile=True
-
 from libc.string cimport strcmp
 from libc.stdlib cimport malloc, free, atof
 from libc.stdio cimport fopen, fclose, fgets, FILE
@@ -261,17 +259,18 @@ def load_model(path):
     path = os.path.join(os.path.dirname(__file__), 'assets', 'models', path)
     return WavefrontObject(path)
 
-cdef inline point(Face f, object vertices, object normals, object textures, int tex_id, float sx, float sy, float sz, int n):
+@cython.nonecheck(False)
+cdef inline void point(Face f, WavefrontObject m, int tex_id, float sx, float sy, float sz, int n):
     cdef float x, y, z
-    cdef object normal, texture
+    cdef tuple normal, texture
     if f.norms:
-        normal = normals[f.norms[n]]
+        normal = m.normals[f.norms[n]]
         glNormal3f(normal[0], normal[1], normal[2])
     if tex_id:
-        texture = textures[f.texs[n]]
+        texture = m.textures[f.texs[n]]
         glTexCoord2f(texture[0], texture[1])
 
-    x, y, z = vertices[f.verts[n]]
+    x, y, z = m.vertices[f.verts[n]]
     glVertex3f(x * sx, y * sy, z * sz)
 
 cpdef model_list(WavefrontObject model, float sx=1, float sy=1, float sz=1, object rotation=(0, 0, 0)):
@@ -295,9 +294,6 @@ cpdef model_list(WavefrontObject model, float sx=1, float sy=1, float sz=1, obje
     glRotatef(roll, 0, 0, 1)
     glPopAttrib()
 
-    vertices = model.vertices
-    textures = model.textures
-    normals = model.normals
     cdef GLfloat ka[4]
     cdef Face f
     cdef Group g
@@ -332,14 +328,14 @@ cpdef model_list(WavefrontObject model, float sx=1, float sy=1, float sz=1, obje
 
         glBegin(GL_TRIANGLES)
         for f in g.faces:
-            point(f, vertices, normals, textures, tex_id, sx, sy, sz, 0)
-            point(f, vertices, normals, textures, tex_id, sx, sy, sz, 1)
-            point(f, vertices, normals, textures, tex_id, sx, sy, sz, 2)
+            point(f, model, tex_id, sx, sy, sz, 0)
+            point(f, model, tex_id, sx, sy, sz, 1)
+            point(f, model, tex_id, sx, sy, sz, 2)
 
             if f.type == FACE_QUADS:
-                point(f, vertices, normals, textures, tex_id, sx, sy, sz, 2)
-                point(f, vertices, normals, textures, tex_id, sx, sy, sz, 3)
-                point(f, vertices, normals, textures, tex_id, sx, sy, sz, 0)
+                point(f, model, tex_id, sx, sy, sz, 2)
+                point(f, model, tex_id, sx, sy, sz, 3)
+                point(f, model, tex_id, sx, sy, sz, 0)
         glEnd()
 
     glPopAttrib()
