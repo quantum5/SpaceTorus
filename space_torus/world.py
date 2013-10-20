@@ -104,7 +104,7 @@ def load_world(file):
                     cloudmap_id = compile(sphere, radius + 2, int(radius / 2), int(radius / 2), cloud_texture, lighting=False)
                 cheap, _, atm_texture = get_best_texture(atm_texture)
                 if not cheap:
-                    atmosphere_id = compile(disk, radius + 2, radius + size + 2, 30, atm_texture)
+                    atmosphere_id = compile(disk, radius, radius + size, 30, atm_texture)
 
             world.tracker.append(Planet(planet_id, (x, y, z), (pitch, yaw, roll), delta=delta, atmosphere=atmosphere_id, cloudmap=cloudmap_id))
             if 'ring' in info:

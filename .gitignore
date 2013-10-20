@@ -39,3 +39,7 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+space_torus/assets/textures/*_medium.*
+space_torus/assets/textures/*_small.*
+temp
