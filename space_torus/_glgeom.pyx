@@ -9,6 +9,7 @@ cdef float TWOPI = PI * 2
 
 cdef extern from "Python.h":
     object PyBytes_FromStringAndSize(const char *s, Py_ssize_t len)
+    const char* PyBytes_AsString(bytes o)
 
 @cython.cdivision(True)
 cpdef torus(float major_radius, float minor_radius, int n_major, int n_minor, tuple material, int shininess=125):
@@ -67,9 +68,8 @@ cpdef bytes bgr_to_rgb(bytes buffer, int width, int height, bint alpha=0, bint b
     cdef int depth = length / (width * height)
     cdef int depth2 = depth - alpha
     cdef char *result = <char*>malloc(length)
-    cdef char *source = <char*>malloc(length)
+    cdef const char *source = PyBytes_AsString(buffer)
     cdef int x, y, ioffset, ooffset, i, row = width * depth
-    memcpy(source, <char*>buffer, length)
     for y in xrange(height):
         for x in xrange(width):
             ioffset = y * width * depth + x * depth
@@ -79,6 +79,5 @@ cpdef bytes bgr_to_rgb(bytes buffer, int width, int height, bint alpha=0, bint b
             if alpha:
                 result[ooffset+depth2] = source[ioffset+depth2]
     cdef object final = PyBytes_FromStringAndSize(result, length)
-    free(source)
     free(result)
     return final
