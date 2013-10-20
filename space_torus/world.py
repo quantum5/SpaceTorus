@@ -64,25 +64,20 @@ def load_world(file):
             x, y, z = waypoint
             world.waypoints.append((e(x), e(y), e(z)))
 
-        def get(var, set, default=None):
-            if var in set:
-                return set[var]
-            return default
-
         for planet in root['planets']:
             print "Loading %s." % planet
             info = root['planets'][planet]
 
-            texture = get('texture', info)
-            lighting = get('lighting', info, True)
-            x = e(get('x', info, 0))
-            y = e(get('y', info, 0))
-            z = e(get('z', info, 0))
-            pitch = e(get('pitch', info, 0))
-            yaw = e(get('yaw', info, 0))
-            roll = e(get('roll', info, 0))
-            delta = e(get('delta', info, 5))
-            radius = e(get('radius', info))
+            texture = info.get('texture', None)
+            lighting = info.get('lighting', True)
+            x = e(info.get('x', 0))
+            y = e(info.get('y', 0))
+            z = e(info.get('z', 0))
+            pitch = e(info.get('pitch', 0))
+            yaw = e(info.get('yaw', 0))
+            roll = e(info.get('roll', 0))
+            delta = e(info.get('delta', 5))
+            radius = e(info.get('radius', None))
 
             cheap, skip, texture = get_best_texture(texture, optional=info.get('optional', False))
             if skip:
@@ -96,9 +91,9 @@ def load_world(file):
             cloudmap_id = 0
             if 'atmosphere' in info:
                 atmosphere_data = info['atmosphere']
-                size = e(get('diffuse_size', atmosphere_data))
-                atm_texture = get('diffuse_texture', atmosphere_data)
-                cloud_texture = get('cloud_texture', atmosphere_data)
+                size = e(atmosphere_data.get('diffuse_size', None))
+                atm_texture = atmosphere_data.get('diffuse_texture', None)
+                cloud_texture = atmosphere_data.get('cloud_texture', None)
                 cheap, _, cloud_texture = get_best_texture(cloud_texture)
                 if not cheap:
                     cloudmap_id = compile(sphere, radius + 2, int(radius / 2), int(radius / 2), cloud_texture, lighting=False)
@@ -109,12 +104,12 @@ def load_world(file):
             world.tracker.append(Planet(planet_id, (x, y, z), (pitch, yaw, roll), delta=delta, atmosphere=atmosphere_id, cloudmap=cloudmap_id))
             if 'ring' in info:
                 ring_data = info['ring']
-                texture = get('texture', ring_data)
-                distance = e(get('distance', ring_data))
-                size = e(get('size', ring_data))
-                pitch = e(get('pitch', ring_data, pitch))
-                yaw = e(get('yaw', ring_data, yaw))
-                roll = e(get('roll', ring_data, roll))
+                texture = ring_data.get('texture', None)
+                distance = e(ring_data.get('distance', radius * 1.2))
+                size = e(ring_data.get('size', radius / 2))
+                pitch = e(ring_data.get('pitch', pitch))
+                yaw = e(ring_data.get('yaw', yaw))
+                roll = e(ring_data.get('roll', roll))
 
                 cheap, _, texture = get_best_texture(texture)
                 if not cheap:
