@@ -5,6 +5,26 @@ import os.path
 import struct
 
 try:
+    from _glgeom import bgr_to_rgb
+except ImportError:
+    import warnings
+    warnings.warn('Compile _glgeom.c, or double the start up time.')
+
+    def bgr_to_rgb(source, width, height, alpha=False):
+        length = len(source)
+        depth = length / (width * height)
+        depth2 = depth - alpha
+        result = bytearray(length)
+        for y in xrange(height):
+            for x in xrange(width):
+                offset = y * width * depth + x * depth
+                for i in xrange(depth2):
+                    result[offset+i] = source[offset+depth2-i-1]
+                if alpha:
+                    result[offset+depth2] = source[offset+depth2]
+        return str(result)
+
+try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
@@ -105,7 +125,7 @@ def check_size(width, height):
             raise ValueError('Texture not power of two')
 
 
-def load_texture(file, safe=False):
+def load_texture(file):
     if file in cache:
         return cache[file]
     print "Loading image %s..." % file,
@@ -136,7 +156,13 @@ def load_texture(file, safe=False):
     # Flip from BGR to RGB
     # I hate you too, Pyglet...
     # REGULAR EXPRESSIONS ARE NOT MEANT TO PARSE BINARY DATA!!!
-    texture = raw.get_data('RGBA', width * 4) if safe else raw.data[::-1] if 'BGR' in raw.format else raw.data
+    #texture = raw.get_data('RGBA', width * 4) if safe else raw.data[::-1] if 'BGR' in raw.format else raw.data
+    if raw.format in ('BGR', 'BGRA'):
+        texture = bgr_to_rgb(raw.data, width, height, 'A' in raw.format)
+    elif raw.format in ('RGB', 'RGBA'):
+        texture = raw.data
+    else:
+        raw.get_data('RGBA', width * 4)
 
     buffer = c_ulong()
     glGenTextures(1, byref(buffer))

@@ -1,9 +1,14 @@
 from libc.math cimport sin, cos, sqrt
+from libc.stdlib cimport malloc, free
+from libc.string cimport memcpy
 cimport cython
 
 include "_cyopengl.pxi"
 cdef float PI = 3.1415926535897932324626
 cdef float TWOPI = PI * 2
+
+cdef extern from "Python.h":
+    object PyBytes_FromStringAndSize(const char *s, Py_ssize_t len)
 
 @cython.cdivision(True)
 cpdef torus(float major_radius, float minor_radius, int n_major, int n_minor, tuple material, int shininess=125):
@@ -56,3 +61,23 @@ cpdef torus(float major_radius, float minor_radius, int n_major, int n_minor, tu
 
         glEnd()
     glPopAttrib()
+
+cpdef bytes bgr_to_rgb(bytes buffer, int width, int height, bint alpha=0):
+    cdef int length = len(buffer)
+    cdef int depth = length / (width * height)
+    cdef int depth2 = depth - alpha
+    cdef char *result = <char*>malloc(length)
+    cdef char *source = <char*>malloc(length)
+    cdef int x, y, offset, i
+    memcpy(source, <char*>buffer, length)
+    for y in xrange(height):
+        for x in xrange(width):
+            offset = y * width * depth + x * depth
+            for i in xrange(depth2):
+                result[offset+i] = source[offset+depth2-i-1]
+            if alpha:
+                result[offset+depth2] = source[offset+depth2]
+    cdef object final = PyBytes_FromStringAndSize(result, length)
+    free(source)
+    free(result)
+    return final

@@ -21,7 +21,7 @@ TORUS_DISTANCE = 20
 AU = TORUS_DISTANCE * 100
 
 
-def get_best_texture(info, safe=False, optional=False):
+def get_best_texture(info, optional=False):
     cheap = False
     skip = False
     texture = None
@@ -34,14 +34,14 @@ def get_best_texture(info, safe=False, optional=False):
                     break
                 continue
             try:
-                texture = load_texture(item, safe=safe)
-            except ValueError:
-                pass
+                texture = load_texture(item)
+            except ValueError as e:
+                print e
             else:
                 break
     else:
         try:
-            texture = load_texture(info, safe=safe)
+            texture = load_texture(info)
         except ValueError:
             if optional:
                 skip = True
@@ -83,7 +83,6 @@ def load_world(file):
             roll = e(get('roll', info, 0))
             delta = e(get('delta', info, 5))
             radius = e(get('radius', info))
-            safe = info.get('safe', False)
 
             cheap, skip, texture = get_best_texture(texture, optional=info.get('optional', False))
             if skip:
@@ -103,7 +102,7 @@ def load_world(file):
                 cheap, _, cloud_texture = get_best_texture(cloud_texture)
                 if not cheap:
                     cloudmap_id = compile(sphere, radius + 2, int(radius / 2), int(radius / 2), cloud_texture, lighting=False)
-                cheap, _, atm_texture = get_best_texture(atm_texture, safe=True)
+                cheap, _, atm_texture = get_best_texture(atm_texture)
                 if not cheap:
                     atmosphere_id = compile(disk, radius + 2, radius + size + 2, 30, atm_texture)
 
@@ -117,7 +116,7 @@ def load_world(file):
                 yaw = e(get('yaw', ring_data, yaw))
                 roll = e(get('roll', ring_data, roll))
 
-                cheap, _, texture = get_best_texture(texture, safe=True)
+                cheap, _, texture = get_best_texture(texture)
                 if not cheap:
                     world.tracker.append(
                         Planet(compile(disk, distance, distance + size, 30, texture), (x, y, z),
