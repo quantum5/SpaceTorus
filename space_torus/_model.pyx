@@ -1,3 +1,5 @@
+# cython: profile=True
+
 from libc.string cimport strcmp
 from libc.stdlib cimport malloc, free, atof
 from libc.stdio cimport fopen, fclose, fgets, FILE
@@ -139,7 +141,7 @@ cdef class WavefrontObject(object):
         else:
             type = FACE_QUADS
 
-        cdef int current_value = -1
+        cdef int current_value = -1, texture_len = len(self.textures)
         cdef list raw_faces, vindices = [], nindices = [], tindices = []
 
         for i in xrange(1, vertex_count + 1):
@@ -154,7 +156,7 @@ cdef class WavefrontObject(object):
                 continue
             if l >= 2 and raw_faces[1]:
                 current_value = int(raw_faces[1])
-                if current_value <= len(self.textures):
+                if current_value <= texture_len:
                     tindices.append(current_value - 1)
                     face_textures.append(self.textures[current_value - 1])
             if l >= 3 and raw_faces[2]:
@@ -259,7 +261,7 @@ def load_model(path):
     path = os.path.join(os.path.dirname(__file__), 'assets', 'models', path)
     return WavefrontObject(path)
 
-cdef point(Face f, object vertices, object normals, object textures, int tex_id, float sx, float sy, float sz, int n):
+cdef inline point(Face f, object vertices, object normals, object textures, int tex_id, float sx, float sy, float sz, int n):
     cdef float x, y, z
     cdef object normal, texture
     if f.norms:
@@ -300,14 +302,9 @@ cpdef model_list(WavefrontObject model, float sx=1, float sy=1, float sz=1, obje
     cdef Face f
     cdef Group g
     cdef int tex_id
-    cdef str name
-    cdef Material material
 
     for g in model.groups:
-        name = g.name
-        material = g.material
-
-        tex_id = load_texture(os.path.join(model.root, material.texture)) if (material and material.texture) else 0
+        tex_id = 0
 
         if tex_id:
             glEnable(GL_TEXTURE_2D)
@@ -316,20 +313,22 @@ cpdef model_list(WavefrontObject model, float sx=1, float sy=1, float sz=1, obje
             glBindTexture(GL_TEXTURE_2D, 0)
             glDisable(GL_TEXTURE_2D)
 
-        if material:
-            if material.Ka:
-                kx, ky, kz = material.Ka
+        if g.material is not None:
+            if g.material.texture is not None:
+                tex_id = load_texture(os.path.join(model.root, g.material.texture))
+            if g.material.Ka:
+                kx, ky, kz = g.material.Ka
                 ka[:] = [kx, ky, kz, 1]
                 glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ka)
-            if material.Kd:
-                kx, ky, kz = material.Kd
+            if g.material.Kd:
+                kx, ky, kz = g.material.Kd
                 ka[:] = [kx, ky, kz, 1]
                 glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, ka)
-            if material.Ks:
-                kx, ky, kz = material.Ks
+            if g.material.Ks:
+                kx, ky, kz = g.material.Ks
                 ka[:] = [kx, ky, kz, 1]
                 glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, ka)
-            glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, material.shininess)
+            glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, g.material.shininess)
 
         glBegin(GL_TRIANGLES)
         for f in g.faces:

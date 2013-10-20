@@ -178,8 +178,9 @@ class Applet(pyglet.window.Window):
     def on_key_press(self, symbol, modifiers):
         if self.exclusive: # Only handle keyboard input if mouse is grabbed
             if symbol == key.ESCAPE:
-                sys.exit() # Quit game
-            if symbol == key.E:
+                #sys.exit() # Quit game
+                pyglet.app.exit()
+            elif symbol == key.E:
                 self.set_exclusive_mouse(False) # Escape mouse
             elif symbol == key.F:
                 self.set_fullscreen(not self.fullscreen)

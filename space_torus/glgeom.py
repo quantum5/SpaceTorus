@@ -59,8 +59,10 @@ def disk(rinner, router, segs, tex):
 
     glBegin(GL_TRIANGLE_STRIP)
     texture = 0
+    factor = TWOPI / res
+    theta = 0
     for n in xrange(res + 1):
-        theta = TWOPI * n / res
+        theta += factor
         x = cos(theta)
         y = sin(theta)
         glTexCoord2f(0, texture)
@@ -102,7 +104,7 @@ def sphere(r, lats, longs, tex, lighting=True, fv4=GLfloat * 4):
     gluDeleteQuadric(sphere)
 
 
-def colourball(r, lats, longs, colour, lighting=True, fv4=GLfloat * 4):
+def colourball(r, lats, longs, colour, fv4=GLfloat * 4):
     '''
         Sphere function from the OpenGL red book.
     '''
@@ -133,7 +135,7 @@ def torus(major_radius, minor_radius, n_major, n_minor, material, shininess=125,
 
     def n(x, y, z):
         m = 1.0 / sqrt(x * x + y * y + z * z)
-        return [x * m, y * m, z * m]
+        return (x * m, y * m, z * m)
 
     for i in xrange(n_major):
         a0 = i * major_s
@@ -151,10 +153,10 @@ def torus(major_radius, minor_radius, n_major, n_minor, material, shininess=125,
             r = minor_radius * c + major_radius
             z = minor_radius * sin(b)
 
-            glNormal3fv((GLfloat * 3)(*n(x0 * c, y0 * c, z / minor_radius)))
+            glNormal3f(*n(x0 * c, y0 * c, z / minor_radius))
             glVertex3f(x0 * r, y0 * r, z)
 
-            glNormal3fv((GLfloat * 3)(*n(x1 * c, y1 * c, z / minor_radius)))
+            glNormal3f(*n(x1 * c, y1 * c, z / minor_radius))
             glVertex3f(x1 * r, y1 * r, z)
 
         glEnd()
