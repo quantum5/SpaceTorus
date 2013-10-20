@@ -1,6 +1,6 @@
 from pyglet import image
 from pyglet.gl import *
-from ctypes import c_int, byref
+from ctypes import c_int, byref, c_ulong
 import os.path
 import struct
 
@@ -106,10 +106,8 @@ def check_size(width, height):
 
 
 def load_texture(file, safe=False):
-    global id, cache
     if file in cache:
         return cache[file]
-    id += 1
     print "Loading image %s..." % file,
 
     path = os.path.join(os.path.dirname(__file__), "assets", "textures", file)
@@ -140,16 +138,17 @@ def load_texture(file, safe=False):
     # REGULAR EXPRESSIONS ARE NOT MEANT TO PARSE BINARY DATA!!!
     texture = raw.get_data('RGBA', width * 4) if safe else raw.data[::-1] if 'BGR' in raw.format else raw.data
 
-    buffer = [id] # Buffer to hold the returned texture id
-    glGenTextures(1, (GLuint * len(buffer))(*buffer))
+    buffer = c_ulong()
+    glGenTextures(1, byref(buffer))
+    id = buffer.value
 
-    glBindTexture(GL_TEXTURE_2D, buffer[0])
+    glBindTexture(GL_TEXTURE_2D, id)
 
     #Load textures with no filtering. Filtering generally makes the texture blur.
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
     glTexImage2D(GL_TEXTURE_2D, 0, mode, width, height, 0, mode, GL_UNSIGNED_BYTE, texture)
 
-    cache[file] = buffer[0]
+    cache[file] = id
 
-    return buffer[0]
+    return id
