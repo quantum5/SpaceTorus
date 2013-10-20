@@ -294,7 +294,6 @@ cpdef model_list(WavefrontObject model, float sx=1, float sy=1, float sz=1, obje
     glRotatef(roll, 0, 0, 1)
     glPopAttrib()
 
-    cdef GLfloat ka[4]
     cdef Face f
     cdef Group g
     cdef int tex_id
@@ -314,16 +313,13 @@ cpdef model_list(WavefrontObject model, float sx=1, float sy=1, float sz=1, obje
                 tex_id = load_texture(os.path.join(model.root, g.material.texture))
             if g.material.Ka:
                 kx, ky, kz = g.material.Ka
-                ka[:] = [kx, ky, kz, 1]
-                glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ka)
+                glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, [kx, ky, kz, 1])
             if g.material.Kd:
                 kx, ky, kz = g.material.Kd
-                ka[:] = [kx, ky, kz, 1]
-                glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, ka)
+                glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, [kx, ky, kz, 1])
             if g.material.Ks:
                 kx, ky, kz = g.material.Ks
-                ka[:] = [kx, ky, kz, 1]
-                glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, ka)
+                glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [kx, ky, kz, 1])
             glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, g.material.shininess)
 
         glBegin(GL_TRIANGLES)
