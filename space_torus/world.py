@@ -53,16 +53,19 @@ def load_world(file):
             delta = e(get('delta', info, 5))
             radius = e(get('radius', info))
 
-            id = compile(sphere, radius, int(radius / 2), int(radius / 2), load_texture(texture), lighting=lighting)
+            planet_id = compile(sphere, radius, int(radius / 2), int(radius / 2), load_texture(texture), lighting=lighting)
 
-            atmosphere = 0
+            atmosphere_id = 0
+            cloudmap_id = 0
             if 'atmosphere' in info:
                 atmosphere_data = info['atmosphere']
-                size = e(get('size', atmosphere_data))
-                atm_texture = get('texture', atmosphere_data)
-                atmosphere = compile(disk, radius, radius + size, 30, load_texture(atm_texture, safe=True))
+                size = e(get('diffuse_size', atmosphere_data))
+                atm_texture = get('diffuse_texture', atmosphere_data)
+                cloud_texture = get('cloud_texture', atmosphere_data)
+                cloudmap_id = compile(sphere, radius + 2, int(radius / 2), int(radius / 2), load_texture(cloud_texture), lighting=False)
+                atmosphere_id = compile(disk, radius + 2, radius + size + 2, 30, load_texture(atm_texture, safe=True))
 
-            world.tracker.append(Planet(id, (x, y, z), (pitch, yaw, roll), delta=delta, atmosphere=atmosphere))
+            world.tracker.append(Planet(planet_id, (x, y, z), (pitch, yaw, roll), delta=delta, atmosphere=atmosphere_id, cloudmap=cloudmap_id))
             if 'ring' in info:
                 ring_data = info['ring']
                 texture = get('texture', ring_data)

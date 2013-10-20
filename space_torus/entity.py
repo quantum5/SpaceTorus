@@ -26,6 +26,7 @@ class Planet(Entity):
     def __init__(self, *args, **kwargs):
         self.delta = kwargs.pop('delta', 5)
         self.atmosphere = kwargs.pop('atmosphere', 0)
+        self.cloudmap = kwargs.pop('cloudmap', 0)
         super(Planet, self).__init__(*args, **kwargs)
 
     def update(self):

@@ -3,7 +3,6 @@ import py2exe
 from glob import glob
 import sys
 import os
-import site
 
 sys.argv.append("py2exe")
 
@@ -11,17 +10,17 @@ data = []
 
 parent = os.path.abspath(__file__ + "/../")
 join = os.path.join
-for package in site.getsitepackages():
+'''for package in site.getsitepackages():
     for f in glob(join(package, "pyglet", "media", "avbin*.dll")):
         try:
             data.append(("", [f]))
         except:
             print "Error: AVBin library not found in site-packages/pyglet/media"
-            sys.exit()
+            sys.exit()'''
 
 resources = [(r"space_torus\assets\textures", ["*.*"]),
              (r"space_torus\assets\models\asteroids", ["*.obj", "*.mtl"]),
-             (r"space_torus\assets\music", ["*.*"]),
+             # (r"space_torus\assets\music", ["*.*"]),
              (r"space_torus", ["*.py", "*.json"])]
 
 for res in resources:
@@ -33,12 +32,20 @@ for res in resources:
 
 setup(
     windows=["bootloader.py"],
-    data_files=data
+    data_files=data,
+    options={
+                "py2exe": {
+                        "unbuffered": True,
+                        "optimize": 2,
+                        "dist_dir": "bin",
+                        "excludes": ['_ssl', 'unittest', 'doctest', 'difflib', 'inspect']
+                }
+        }
 )
 
-os.chdir("dist")
+os.chdir("bin")
 try:
     os.remove("Space Torus.exe")
 except:
     pass
-os.system('ren bootloader.exe "Space Torus.exe"')
+os.rename("bootloader.exe", "Space Torus.exe")
