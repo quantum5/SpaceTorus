@@ -14,11 +14,20 @@ __all__ = ['load_texture']
 id = 0
 cache = {}
 
-buf = c_int()
-glGetIntegerv(GL_MAX_TEXTURE_SIZE, byref(buf))
-max_texture = buf.value
+max_texture = None
+power_of_two = None
 
-power_of_two = gl_info.have_version(2) or gl_info.have_extension('GL_ARB_texture_non_power_of_two')
+
+def init():
+    global max_texture, power_of_two
+
+    if max_texture is None:
+        buf = c_int()
+        glGetIntegerv(GL_MAX_TEXTURE_SIZE, byref(buf))
+        max_texture = buf.value
+
+    if power_of_two is None:
+        power_of_two = gl_info.have_version(2) or gl_info.have_extension('GL_ARB_texture_non_power_of_two')
 
 is_power2 = lambda num: num != 0 and ((num & (num - 1)) == 0)
 
@@ -86,6 +95,7 @@ def image_info(data):
 
 
 def check_size(width, height):
+    init()
     if width > max_texture or height > max_texture:
         raise ValueError('Texture too large')
     elif not power_of_two:

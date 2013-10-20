@@ -21,6 +21,36 @@ TORUS_DISTANCE = 20
 AU = TORUS_DISTANCE * 100
 
 
+def get_best_texture(info, safe=False, optional=False):
+    cheap = False
+    skip = False
+    texture = None
+    if isinstance(info, list):
+        for item in info:
+            if isinstance(item, list):
+                if len(item) == 4:
+                    cheap = True
+                    texture = item
+                    break
+                continue
+            try:
+                texture = load_texture(item, safe=safe)
+            except ValueError:
+                pass
+            else:
+                break
+    else:
+        try:
+            texture = load_texture(info, safe=safe)
+        except ValueError:
+            if optional:
+                skip = True
+            else:
+                cheap = True
+                texture = [1, 1, 1, 1]
+    return cheap, skip, texture
+
+
 def load_world(file):
     with open(os.path.join(os.path.dirname(__file__), file)) as f:
         world = World()
@@ -55,29 +85,9 @@ def load_world(file):
             radius = e(get('radius', info))
             safe = info.get('safe', False)
 
-            cheap = False
-            if isinstance(texture, list):
-                for item in texture:
-                    if isinstance(item, list):
-                        if len(item) == 4:
-                            cheap = True
-                            texture = item
-                            break
-                        continue
-                    try:
-                        texture = load_texture(item, safe=safe)
-                    except ValueError:
-                        pass
-                    else:
-                        break
-            else:
-                try:
-                    texture = load_texture(texture, safe=safe)
-                except ValueError:
-                    if info.get('optional', False):
-                        continue
-                    cheap = True
-                    texture = [1, 1, 1, 1]
+            cheap, skip, texture = get_best_texture(texture, optional=info.get('optional', False))
+            if skip:
+                continue
             if cheap:
                 planet_id = compile(colourball, radius, int(radius / 2), int(radius / 2), texture)
             else:
@@ -90,8 +100,12 @@ def load_world(file):
                 size = e(get('diffuse_size', atmosphere_data))
                 atm_texture = get('diffuse_texture', atmosphere_data)
                 cloud_texture = get('cloud_texture', atmosphere_data)
-                cloudmap_id = compile(sphere, radius + 2, int(radius / 2), int(radius / 2), load_texture(cloud_texture), lighting=False)
-                atmosphere_id = compile(disk, radius + 2, radius + size + 2, 30, load_texture(atm_texture, safe=True))
+                cheap, _, cloud_texture = get_best_texture(cloud_texture)
+                if not cheap:
+                    cloudmap_id = compile(sphere, radius + 2, int(radius / 2), int(radius / 2), cloud_texture, lighting=False)
+                cheap, _, atm_texture = get_best_texture(atm_texture, safe=True)
+                if not cheap:
+                    atmosphere_id = compile(disk, radius + 2, radius + size + 2, 30, atm_texture)
 
             world.tracker.append(Planet(planet_id, (x, y, z), (pitch, yaw, roll), delta=delta, atmosphere=atmosphere_id, cloudmap=cloudmap_id))
             if 'ring' in info:
@@ -103,9 +117,11 @@ def load_world(file):
                 yaw = e(get('yaw', ring_data, yaw))
                 roll = e(get('roll', ring_data, roll))
 
-                world.tracker.append(
-                    Planet(compile(disk, distance, distance + size, 30, load_texture(texture, safe=True)), (x, y, z),
-                           (pitch, yaw, roll)))
+                cheap, _, texture = get_best_texture(texture, safe=True)
+                if not cheap:
+                    world.tracker.append(
+                        Planet(compile(disk, distance, distance + size, 30, texture), (x, y, z),
+                               (pitch, yaw, roll)))
         return world
 
 
