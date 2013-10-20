@@ -1,4 +1,4 @@
-from libc.string cimport strcmp
+from libc.string cimport strcmp, strlen
 from libc.stdlib cimport malloc, free, atof
 from libc.stdio cimport fopen, fclose, fgets, FILE
 cimport cython
@@ -213,43 +213,45 @@ cdef class WavefrontObject(object):
         cdef ssize_t read
         cdef char *type
         cdef list words
+        cdef int hash, length
      
         while fgets(buf, bufsize, cfile):
             if buf[0] in (0, 10, 13, 35):
                 continue # Empty or comment
             words = buf.split()
-            try:
-                type = words[0]
-            except IndexError:
-                print words, `buf`, buf[0]
-                raise
-            
-            if strcmp(type, b'v') == 0:
-                self.vertex(words)
-            elif strcmp(type, b'vn') == 0:
-                self.normal(words)
-            elif strcmp(type, b'vt') == 0:
-                self.texture(words)
-            elif strcmp(type, b'f') == 0:
-                self.face(words)
+            type = words[0]
+
+            length = strlen(type)
+            if not length:
+                continue
+            elif length < 3:
+                hash = type[0] << 8 | type[1]
+                if hash == 0x7600:  # v\0
+                    self.vertex(words)
+                elif hash == 0x766e: # vn
+                    self.normal(words)
+                elif hash == 0x7674: # vt
+                    self.texture(words)
+                elif hash == 0x6600: # f
+                    self.face(words)
+                elif hash == 0x6700: # g
+                    self.group(words)
+                elif hash == 0x6f00: # o
+                    self.group(words)
+                elif hash == 0x4b61: # Ka
+                    self.Ka(words)
+                elif hash == 0x4b64: # Kd
+                    self.Kd(words)
+                elif hash == 0x4b73: # Ks
+                    self.Ks(words)
+                elif hash == 0x4e73: # Ns
+                    self.material_shininess(words)
             elif strcmp(type, b'mtllib') == 0:
                 self.material(words)
             elif strcmp(type, b'usemtl') == 0:
                 self.use_material(words)
-            elif strcmp(type, b'g') == 0:
-                self.group(words)
-            elif strcmp(type, b'o') == 0: # TODO: o is not really g
-                self.group(words)
             elif strcmp(type, b'newmtl') == 0:
                 self.new_material(words)
-            elif strcmp(type, b'Ka') == 0:
-                self.Ka(words)
-            elif strcmp(type, b'Kd') == 0:
-                self.Kd(words)
-            elif strcmp(type, b'Ks') == 0:
-                self.Ks(words)
-            elif strcmp(type, b'Ns') == 0:
-                self.material_shininess(words)
             elif strcmp(type, b'map_Kd') == 0:
                 self.material_texture(words)
         free(buf)
@@ -273,12 +275,12 @@ cdef inline void point(Face f, WavefrontObject m, int tex_id, float sx, float sy
     x, y, z = m.vertices[f.verts[n]]
     glVertex3f(x * sx, y * sy, z * sz)
 
-cpdef model_list(WavefrontObject model, float sx=1, float sy=1, float sz=1, object rotation=(0, 0, 0)):
+cpdef int model_list(WavefrontObject model, float sx=1, float sy=1, float sz=1, object rotation=(0, 0, 0)):
     for m, text in model.materials.iteritems():
         if text.texture:
             load_texture(os.path.join(model.root, text.texture))
 
-    display = glGenLists(1)
+    cdef int display = glGenLists(1)
 
     glNewList(display, GL_COMPILE)
     glPushMatrix()

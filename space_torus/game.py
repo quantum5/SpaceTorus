@@ -151,8 +151,8 @@ class Applet(pyglet.window.Window):
         glLightfv(GL_LIGHT1, GL_DIFFUSE, fv4(.5, .5, .5, 1))
         glLightfv(GL_LIGHT1, GL_SPECULAR, fv4(1, 1, 1, 1))
 
-        self.torus_id = compile(torus, 3.0, 0.25, TORUS_DETAIL ** 2, TORUS_DETAIL ** 2, fv4(.07, .37, 1, 2))
-        self.cl_torus_id = compile(torus, 3.0, 0.25, TORUS_DETAIL ** 2, TORUS_DETAIL ** 2, fv4(0, 1, 0, 1))
+        self.torus_id = compile(torus, 3.0, 0.25, TORUS_DETAIL ** 2, TORUS_DETAIL ** 2, (.07, .37, 1, 2))
+        self.cl_torus_id = compile(torus, 3.0, 0.25, TORUS_DETAIL ** 2, TORUS_DETAIL ** 2, (0, 1, 0, 1))
 
         self.asteroid_ids = [model_list(load_model(r"asteroids\01.obj"), 5, 5, 5, (0, 0, 0)),
                              model_list(load_model(r"asteroids\02.obj"), 5, 5, 5, (0, 0, 0)),

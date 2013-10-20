@@ -97,9 +97,11 @@ def image_info(data):
 def check_size(width, height):
     init()
     if width > max_texture or height > max_texture:
+        print 'too large'
         raise ValueError('Texture too large')
     elif not power_of_two:
         if not is_power2(width) or not is_power2(height):
+            print 'not power of two'
             raise ValueError('Texture not power of two')
 
 
@@ -108,13 +110,14 @@ def load_texture(file, safe=False):
     if file in cache:
         return cache[file]
     id += 1
-    print "Loading image %s..." % file
+    print "Loading image %s..." % file,
 
     path = os.path.join(os.path.dirname(__file__), "assets", "textures", file)
 
     try:
         file = open(path, 'rb')
     except IOError:
+        print 'exists not'
         raise ValueError('Texture exists not')
     type, width, height = image_info(file.read(8192))
     file.seek(0, 0)
@@ -124,10 +127,12 @@ def load_texture(file, safe=False):
     try:
         raw = image.load(path, file=file)
     except IOError:
+        print 'exists not'
         raise ValueError('Texture exists not')
 
     width, height = raw.width, raw.height
     check_size(width, height)
+    print
 
     mode = GL_RGBA if 'A' in raw.format else GL_RGB
     # Flip from BGR to RGB

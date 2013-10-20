@@ -121,43 +121,46 @@ def colourball(r, lats, longs, colour, fv4=GLfloat * 4):
     gluDeleteQuadric(sphere)
 
 
-def torus(major_radius, minor_radius, n_major, n_minor, material, shininess=125, fv4=GLfloat * 4):
-    '''
-        Torus function from the OpenGL red book.
-    '''
-    glPushAttrib(GL_CURRENT_BIT)
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, material)
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, fv4(1, 1, 1, 1))
-    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, shininess)
+try:
+    from _glgeom import torus
+except ImportError:
+    def torus(major_radius, minor_radius, n_major, n_minor, material, shininess=125, fv4=GLfloat * 4):
+        '''
+            Torus function from the OpenGL red book.
+        '''
+        glPushAttrib(GL_CURRENT_BIT)
+        glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, fv4(*material))
+        glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, fv4(1, 1, 1, 1))
+        glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, shininess)
 
-    major_s = TWOPI / n_major
-    minor_s = TWOPI / n_minor
+        major_s = TWOPI / n_major
+        minor_s = TWOPI / n_minor
 
-    def n(x, y, z):
-        m = 1.0 / sqrt(x * x + y * y + z * z)
-        return (x * m, y * m, z * m)
+        def n(x, y, z):
+            m = 1.0 / sqrt(x * x + y * y + z * z)
+            return x * m, y * m, z * m
 
-    for i in xrange(n_major):
-        a0 = i * major_s
-        a1 = a0 + major_s
-        x0 = cos(a0)
-        y0 = sin(a0)
-        x1 = cos(a1)
-        y1 = sin(a1)
+        for i in xrange(n_major):
+            a0 = i * major_s
+            a1 = a0 + major_s
+            x0 = cos(a0)
+            y0 = sin(a0)
+            x1 = cos(a1)
+            y1 = sin(a1)
 
-        glBegin(GL_TRIANGLE_STRIP)
+            glBegin(GL_TRIANGLE_STRIP)
 
-        for j in xrange(n_minor + 1):
-            b = j * minor_s
-            c = cos(b)
-            r = minor_radius * c + major_radius
-            z = minor_radius * sin(b)
+            for j in xrange(n_minor + 1):
+                b = j * minor_s
+                c = cos(b)
+                r = minor_radius * c + major_radius
+                z = minor_radius * sin(b)
 
-            glNormal3f(*n(x0 * c, y0 * c, z / minor_radius))
-            glVertex3f(x0 * r, y0 * r, z)
+                glNormal3f(*n(x0 * c, y0 * c, z / minor_radius))
+                glVertex3f(x0 * r, y0 * r, z)
 
-            glNormal3f(*n(x1 * c, y1 * c, z / minor_radius))
-            glVertex3f(x1 * r, y1 * r, z)
+                glNormal3f(*n(x1 * c, y1 * c, z / minor_radius))
+                glVertex3f(x1 * r, y1 * r, z)
 
-        glEnd()
-    glPopAttrib()
+            glEnd()
+        glPopAttrib()
