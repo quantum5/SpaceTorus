@@ -10,18 +10,20 @@ except ImportError:
     import warnings
     warnings.warn('Compile _glgeom.c, or double the start up time.')
 
-    def bgr_to_rgb(source, width, height, alpha=False):
+    def bgr_to_rgb(source, width, height, alpha=False, bottom_up=True):
         length = len(source)
         depth = length / (width * height)
         depth2 = depth - alpha
         result = bytearray(length)
+        row = width * depth
         for y in xrange(height):
             for x in xrange(width):
-                offset = y * width * depth + x * depth
+                ioffset = y * width * depth + x * depth
+                ooffset = (height - y - 1 if bottom_up else y) * row + x * depth
                 for i in xrange(depth2):
-                    result[offset+i] = source[offset+depth2-i-1]
+                    result[ooffset+i] = source[ioffset+depth2-i-1]
                 if alpha:
-                    result[offset+depth2] = source[offset+depth2]
+                    result[ooffset+depth2] = source[ioffset+depth2]
         return str(result)
 
 try:

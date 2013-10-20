@@ -35,8 +35,8 @@ def get_best_texture(info, optional=False):
                 continue
             try:
                 texture = load_texture(item)
-            except ValueError as e:
-                print e
+            except ValueError:
+                pass
             else:
                 break
     else:

@@ -62,21 +62,22 @@ cpdef torus(float major_radius, float minor_radius, int n_major, int n_minor, tu
         glEnd()
     glPopAttrib()
 
-cpdef bytes bgr_to_rgb(bytes buffer, int width, int height, bint alpha=0):
+cpdef bytes bgr_to_rgb(bytes buffer, int width, int height, bint alpha=0, bint bottom_up=1):
     cdef int length = len(buffer)
     cdef int depth = length / (width * height)
     cdef int depth2 = depth - alpha
     cdef char *result = <char*>malloc(length)
     cdef char *source = <char*>malloc(length)
-    cdef int x, y, offset, i
+    cdef int x, y, ioffset, ooffset, i, row = width * depth
     memcpy(source, <char*>buffer, length)
     for y in xrange(height):
         for x in xrange(width):
-            offset = y * width * depth + x * depth
+            ioffset = y * width * depth + x * depth
+            ooffset = (height - y - 1 if bottom_up else y) * row + x * depth
             for i in xrange(depth2):
-                result[offset+i] = source[offset+depth2-i-1]
+                result[ooffset+i] = source[ioffset+depth2-i-1]
             if alpha:
-                result[offset+depth2] = source[offset+depth2]
+                result[ooffset+depth2] = source[ioffset+depth2]
     cdef object final = PyBytes_FromStringAndSize(result, length)
     free(source)
     free(result)
