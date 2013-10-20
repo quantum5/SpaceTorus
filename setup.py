@@ -13,7 +13,7 @@ join = os.path.join
 
 resources = [(r"space_torus\assets\textures", ["*.*"]),
              (r"space_torus\assets\models\asteroids", ["*.obj", "*.mtl"]),
-             (r"space_torus\assets\music", ["*.*"]),
+             # (r"space_torus\assets\music", ["*.*"]),
              (r"space_torus", ["*.py", "*.json"])]
 
 for res in resources:
@@ -26,10 +26,17 @@ for res in resources:
 setup(
     windows=["bootloader.py"],
     data_files=data,
-    options={'py2exe': {'optimize': 1}},
+    options={
+                "py2exe": {
+                        "unbuffered": True,
+                        "optimize": 2,
+                        "dist_dir": "bin",
+                        "excludes": ['_ssl', 'unittest', 'doctest', 'difflib', 'inspect']
+                }
+        }
 )
 
-os.chdir("dist")
+os.chdir("bin")
 try:
     os.unlink('Space Torus.exe')
 except OSError:

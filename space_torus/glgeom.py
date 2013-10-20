@@ -85,9 +85,9 @@ def sphere(r, lats, longs, tex, lighting=True, fv4=GLfloat * 4):
     if lighting:
         gluQuadricNormals(sphere, GLU_SMOOTH)
 
-    glDisable(GL_BLEND)
     glEnable(GL_TEXTURE_2D)
     if lighting:
+        glDisable(GL_BLEND)
         glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, fv4(1, 1, 1, 0))
         glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, fv4(1, 1, 1, 0))
         glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 125)

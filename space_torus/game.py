@@ -24,6 +24,7 @@ from space_torus.glgeom import *
 from math import *
 import time
 import random
+from time import clock
 
 TORUS_DETAIL = 7        # 2 ** detail edges/torus
 TORUS_DISTANCE = 20     # How far each torus should be
@@ -95,9 +96,8 @@ class Applet(pyglet.window.Window):
 
     def __init__(self, *args, **kwargs):
         super(Applet, self).__init__(*args, **kwargs)
-        from time import clock
-
         l = clock()
+        self.fps = 0
         self.world = load_world("world.json")
         self.speed = INITIAL_SPEED
         self.points = []
@@ -107,13 +107,17 @@ class Applet(pyglet.window.Window):
         self.info = True
         self.debug = False
 
-        self.label = pyglet.text.Label('', font_name='Consolas', font_size=12, x=10, y=self.height - 20,
-                                       color=(255, 255, 255, 255))
+        self.label = pyglet.text.Label('', font_name='Consolas', font_size=12, x=10, y=self.height - 20, color=(255,) * 4)
         # Resize is called on startup anyways, so we can start with 0 values.
         self.cam = Camera()
 
         self.exclusive = False
         pyglet.clock.schedule_interval(self.update, 1.0 / TICKS_PER_SECOND)
+
+        def update_fps(dt):
+            self.fps = pyglet.clock.get_fps()
+
+        pyglet.clock.schedule_interval(update_fps, 1)
 
         glClearColor(0, 0, 0, 1)
         glClearDepth(1.0)
@@ -125,7 +129,8 @@ class Applet(pyglet.window.Window):
         #glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         #glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
 
-        glDepthFunc(GL_LESS)
+        glAlphaFunc(GL_GEQUAL, 0.9)
+        glDepthFunc(GL_LEQUAL)
         glEnable(GL_DEPTH_TEST)
         glShadeModel(GL_SMOOTH)
 
@@ -146,7 +151,7 @@ class Applet(pyglet.window.Window):
         glLightfv(GL_LIGHT1, GL_DIFFUSE, fv4(.5, .5, .5, 1))
         glLightfv(GL_LIGHT1, GL_SPECULAR, fv4(1, 1, 1, 1))
 
-        self.torus_id = compile(torus, 3.0, 0.25, TORUS_DETAIL ** 2, TORUS_DETAIL ** 2, fv4(.07, .37, 1, 1))
+        self.torus_id = compile(torus, 3.0, 0.25, TORUS_DETAIL ** 2, TORUS_DETAIL ** 2, fv4(.07, .37, 1, 2))
         self.cl_torus_id = compile(torus, 3.0, 0.25, TORUS_DETAIL ** 2, TORUS_DETAIL ** 2, fv4(0, 1, 0, 1))
 
         self.asteroid_ids = [model_list(load_model(r"asteroids\01.obj"), 5, 5, 5, (0, 0, 0)),
@@ -165,7 +170,7 @@ class Applet(pyglet.window.Window):
 
     def set_exclusive_mouse(self, exclusive):
         super(Applet, self).set_exclusive_mouse(exclusive) # Pass to parent
-        self.exclusive = exclusive # Toggle flag 
+        self.exclusive = exclusive # Toggle flag
 
     def on_mouse_press(self, x, y, button, modifiers):
         if not self.exclusive:
@@ -178,7 +183,6 @@ class Applet(pyglet.window.Window):
     def on_key_press(self, symbol, modifiers):
         if self.exclusive: # Only handle keyboard input if mouse is grabbed
             if symbol == key.ESCAPE:
-                #sys.exit() # Quit game
                 pyglet.app.exit()
             elif symbol == key.E:
                 self.set_exclusive_mouse(False) # Escape mouse
@@ -251,6 +255,7 @@ class Applet(pyglet.window.Window):
             glPopAttrib()
 
         glEnable(GL_LIGHTING)
+        glEnable(GL_BLEND)
         for entity in self.world.tracker:
             x, y, z = entity.location
             pitch, yaw, roll = entity.rotation
@@ -279,24 +284,20 @@ class Applet(pyglet.window.Window):
             glPopMatrix()
 
             if hasattr(entity, "atmosphere") and entity.atmosphere:
-                glEnable(GL_BLEND)
                 glPushMatrix()
-                x0, y0, z0 = 0, 0, 2 * TORUS_DISTANCE * TORI_COUNT
+                x0, y0, z0 = entity.location
                 x1, y1, z1 = self.cam.x, self.cam.y, self.cam.z
                 dx, dy, dz = x1 - x0, y1 - y0, z1 - z0
 
                 distance = sqrt(dz * dz + dx * dx)
-                pitch = -(360 - degrees(atan2(dy, distance)))
+                pitch = (360 - degrees(atan2(dy, distance)))
                 yaw = degrees(atan2(dx, dz))
 
-                roll = 0
-                glTranslatef(0, 0, z0)
+                glTranslatef(x0, y0, z0)
                 glRotatef(pitch, 1, 0, 0)
                 glRotatef(yaw, 0, 1, 0)
-                glRotatef(roll, 0, 0, 1)
                 glCallList(entity.atmosphere)
                 glPopMatrix()
-                glDisable(GL_BLEND)
 
         glColor4f(1, 1, 1, 1)
         glDisable(GL_TEXTURE_2D)
@@ -318,7 +319,7 @@ class Applet(pyglet.window.Window):
 
             x, y, z = self.cam.x, self.cam.y, self.cam.z
             self.label.text = '%d FPS @ (x=%.2f, y=%.2f, z=%.2f) # %s: %s points' % (
-                pyglet.clock.get_fps(), x, y, z, self.speed, len(self.points) + 20 - len(self.missed) * 10)
+                self.fps, x, y, z, self.speed, len(self.points) + 20 - len(self.missed) * 10)
             self.label.draw()
 
             glPushAttrib(GL_CURRENT_BIT | GL_LINE_BIT)
