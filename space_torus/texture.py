@@ -9,6 +9,15 @@ try:
 except ImportError:
     import warnings
     warnings.warn('Compile _glgeom.c, or double the start up time.')
+    
+    # Use magick when _glgeom is not compiled (is actually slower)
+    try:
+        from pgmagick import Blob, Image
+    except ImportError:
+        magick = False
+    else:
+        magick = True
+
 
     def bgr_to_rgb(source, width, height, alpha=False, bottom_up=True):
         length = len(source)
@@ -25,6 +34,8 @@ except ImportError:
                 if alpha:
                     result[ooffset+depth2] = source[ioffset+depth2]
         return str(result)
+else:
+    magick = False
 
 try:
     from cStringIO import StringIO
@@ -147,27 +158,39 @@ def load_texture(file):
     if type:
         check_size(width, height)
 
-    try:
-        raw = image.load(path, file=file)
-    except IOError:
-        print 'exists not'
-        raise ValueError('Texture exists not')
-
-    width, height = raw.width, raw.height
-    check_size(width, height)
-    print
-
-    mode = GL_RGBA if 'A' in raw.format else GL_RGB
-    # Flip from BGR to RGB
-    # I hate you too, Pyglet...
-    # REGULAR EXPRESSIONS ARE NOT MEANT TO PARSE BINARY DATA!!!
-    #texture = raw.get_data('RGBA', width * 4) if safe else raw.data[::-1] if 'BGR' in raw.format else raw.data
-    if raw.format in ('BGR', 'BGRA'):
-        texture = bgr_to_rgb(raw.data, width, height, 'A' in raw.format)
-    elif raw.format in ('RGB', 'RGBA'):
-        texture = raw.data
+    if magick:
+        file.close()
+        file = Image(path.encode('mbcs' if os.name == 'nt' else 'utf8'))
+        geo = file.size()
+        check_size(geo.width(), geo.height())
+        print
+        blob = Blob()
+        file.flip()
+        file.write(blob, 'RGBA')
+        texture = blob.data
+        mode = GL_RGBA
     else:
-        raw.get_data('RGBA', width * 4)
+        try:
+            raw = image.load(path, file=file)
+        except IOError:
+            print 'exists not'
+            raise ValueError('Texture exists not')
+
+        width, height = raw.width, raw.height
+        check_size(width, height)
+        print
+
+        mode = GL_RGBA if 'A' in raw.format else GL_RGB
+        # Flip from BGR to RGB
+        # I hate you too, Pyglet...
+        # REGULAR EXPRESSIONS ARE NOT MEANT TO PARSE BINARY DATA!!!
+        #texture = raw.get_data('RGBA', width * 4) if safe else raw.data[::-1] if 'BGR' in raw.format else raw.data
+        if raw.format in ('BGR', 'BGRA'):
+            texture = bgr_to_rgb(raw.data, width, height, 'A' in raw.format)
+        elif raw.format in ('RGB', 'RGBA'):
+            texture = raw.data
+        else:
+            texture = raw.get_data('RGBA', width * 4)
 
     buffer = c_ulong()
     glGenTextures(1, byref(buffer))
