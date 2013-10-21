@@ -4,6 +4,7 @@ import sys
 
 from camera import Camera
 from widgets import *
+
 try:
     from _model import *
 except ImportError:
@@ -29,6 +30,9 @@ from time import clock
 
 TORUS_DETAIL = 7        # 2 ** detail edges/torus
 TORUS_DISTANCE = 20     # How far each torus should be
+TORUS_MAJOR = 3.0       # Major radius of torus
+TORUS_MINOR = 0.25      # Minor radius of torus
+OVERLAY = False         # Overlay effect on failure
 INITIAL_SPEED = 0       # The initial speed of the player
 DELTA = 0          # How much to increment speed / frame
 TICKS_PER_SECOND = 40   # How many times to update game per second
@@ -44,63 +48,62 @@ def entity_distance(x0, y0, z0):
     def distance(entity):
         x1, y1, z1 = entity.location
         return hypot(hypot(x1 - x0, y1 - y0), z1 - z0)
+
     return distance
 
 
 class Applet(pyglet.window.Window):
     def update(self, dt):
+        cam = self.cam
         if self.exclusive:
             if key.A in self.keys:
-                self.cam.roll += 4
+                cam.roll += 4
             if key.S in self.keys:
-                self.cam.roll -= 4
-            self.cam.move(0, 0, -self.speed * 128 * 0.003)
+                cam.roll -= 4
+            x0, y0, z0 = cam.x, cam.y, cam.z
+            cam.move(0, 0, -self.speed * 128 * 0.003)
+            x1, y1, z1 = cam.x, cam.y, cam.z
+
+            iz0, iz1 = int(z0), int(z1)
+            # Now checking if you passed a torus
+            if iz0 // 10 != iz1 // 10:
+                dx, dy, dz = x1 - x0, y1 - y0, z1 - z0
+                for i in xrange(iz1 - iz0):
+                    # Passed a torus boundary
+                    torus = iz0 // 10 + i + 1
+                    if torus >= len(self.world.tori):
+                        break
+                    tz = torus * 10
+                    tx, ty = self.world.tori[torus]
+                    factor = (tz - z0) / dz
+                    ax, ay = factor * dx + x0, factor * dy + y0
+                    distance = hypot(ax - tx, ay - ty)
+                    if distance > TORUS_MAJOR:
+                        # Oops, you just got out of a torus!
+                        self.score -= 10
+                        if OVERLAY:
+                            def hit(err):
+                                w, h = self.get_size()
+                                glPushAttrib(GL_CURRENT_BIT)
+                                glEnable(GL_BLEND)
+                                glColor4f(1, 0, 0, err / 100.0)
+                                glBegin(GL_QUADS)
+                                glVertex2f(0, 0)
+                                glVertex2f(0, h)
+                                glVertex2f(w, h)
+                                glVertex2f(w, 0)
+                                glEnd()
+                                glPopAttrib()
+                                return err - 1
+                            if not self.debug:
+                                self.overlays[hit] = 50
+                    else:
+                        self.score += 1
+                        self.progress += 1
 
             self.speed += DELTA
-        positions = {}
         for entity in self.world.tracker:
             entity.update()
-            positions[entity.location] = entity
-
-        for entity in self.world.tracker:
-            if entity.id == self.torus_id:
-                x, y, z = entity.location
-                c = self.cam
-                cz = int(c.z)
-
-                if cz == z and (x, y, z) not in self.points:
-                    if hypot(hypot(c.x - x, c.z - z), c.y - y) < 3.25:
-                        self.points.append((x, y, z))
-                        self.world.tracker.remove(entity)
-                        continue
-
-                if z < self.cam.z - TORUS_DISTANCE / 4:
-                    if entity.location not in self.points and entity.location not in self.missed:
-                        def hit(err):
-                            w, h = self.get_size()
-                            glPushAttrib(GL_CURRENT_BIT)
-                            glEnable(GL_BLEND)
-                            glColor4f(1, 0, 0, err / 100.0)
-                            glBegin(GL_QUADS)
-                            glVertex2f(0, 0)
-                            glVertex2f(0, h)
-                            glVertex2f(w, h)
-                            glVertex2f(w, 0)
-                            glEnd()
-                            glPopAttrib()
-                            return err - 1
-
-                            #if not self.debug:
-
-                        #self.overlays[hit] = 50
-                        self.missed.append(entity.location)
-                    self.world.tracker.remove(entity)
-
-        for i in xrange(0, VIEW_DISTANCE):
-            tz = int(self.cam.z) / TORUS_DISTANCE + i
-            tp = self.world.torus_at(tz)
-            if tp and tp not in positions:
-                self.world.tracker.append(Entity(self.torus_id, tp))
 
     def __init__(self, *args, **kwargs):
         super(Applet, self).__init__(*args, **kwargs)
@@ -108,14 +111,15 @@ class Applet(pyglet.window.Window):
         self.fps = 0
         self.world = load_world("world.json")
         self.speed = INITIAL_SPEED
-        self.points = []
-        self.missed = []
+        self.score = 20
+        self.progress = 0
         self.keys = []
         self.overlays = {}
         self.info = True
         self.debug = False
 
-        self.label = pyglet.text.Label('', font_name='Consolas', font_size=12, x=10, y=self.height - 20, color=(255,) * 4)
+        self.label = pyglet.text.Label('', font_name='Consolas', font_size=12, x=10, y=self.height - 20,
+                                       color=(255,) * 4, multiline=True, width=600)
         # Resize is called on startup anyways, so we can start with 0 values.
         self.cam = Camera()
 
@@ -170,7 +174,7 @@ class Applet(pyglet.window.Window):
 
         c = self.cam
         # Position camera at first torus...
-        c.x, c.y, c.z = self.world.torus_at(1)
+        (c.x, c.y), c.z = self.world.tori[0], 0
         c.z -= 10 # ... well, 10 units away...
         self.cam.yaw = 180 # ... and face the torus.
 
@@ -267,6 +271,26 @@ class Applet(pyglet.window.Window):
             world.tracker.sort(key=entity_distance(x, y, z), reverse=True)
             world.tracker.sort(key=attrgetter('background'), reverse=True)
             world.x, world.y, world.z = x, y, z
+
+        flipped = c.pitch > 90 or c.pitch < -90
+        zi = int(z) / 10 * 10
+        if (not flipped and 90 <= c.yaw < 270) or (flipped and (c.yaw < 90 or c.yaw >= 270)):
+            zi += 10
+            range = xrange(max(0, zi - 10), min(zi + VIEW_DISTANCE * 10, len(world.tori) * 10), 10)
+        else:
+            zi += 10
+            range = xrange(max(0, zi - VIEW_DISTANCE * 10), min(zi + 10, len(world.tori) * 10), 10)
+        for z in range:
+            torus = z / 10
+            x, y = world.tori[torus]
+            id = self.cl_torus_id if z == zi else self.torus_id
+            glPushMatrix()
+            glTranslatef(x, y, z)
+            glPushAttrib(GL_TRANSFORM_BIT | GL_CURRENT_BIT)
+            glCallList(id)
+            glPopAttrib()
+            glPopMatrix()
+
         for entity in world.tracker:
             x, y, z = entity.location
             pitch, yaw, roll = entity.rotation
@@ -323,11 +347,12 @@ class Applet(pyglet.window.Window):
                     self.overlays.pop(pointer, None)
                 else:
                     self.overlays[pointer] = err
+            progress_bar(5, 5, 10, 2, min(self.progress / len(self.world.tori), 1) * 100,
+                         type=VERTICAL)
 
-            progress_bar(5, 5, 10, 2, min((len(self.points) / float((len(self.world.waypoints) * 100))) * 100, 100), type=VERTICAL)
-
-            self.label.text = '%d FPS @ (x=%.2f, y=%.2f, z=%.2f) # %s: %s points' % (
-                self.fps, c.x, c.y, c.z, self.speed, len(self.points) + 20 - len(self.missed) * 10)
+            self.label.text = ('%d FPS @ (x=%.2f, y=%.2f, z=%.2f) # %s: %s points\n'
+                               'Direction(pitch=%.2f, yaw=%.2f, roll=%.2f)') % (
+                self.fps, c.x, c.y, c.z, self.speed, self.score, c.pitch, c.yaw, c.roll)
             self.label.draw()
 
             glPushAttrib(GL_CURRENT_BIT | GL_LINE_BIT)

@@ -3,6 +3,7 @@ from collections import OrderedDict
 from operator import itemgetter
 import hashlib
 import os.path
+import random
 
 try:
     import json
@@ -119,6 +120,7 @@ def load_world(file):
                     world.tracker.append(
                         Planet(compile(disk, distance, distance + size, 30, texture), (x, y, z),
                                (pitch, yaw, roll)))
+        world.generate_tori()
         return world
 
 
@@ -126,36 +128,25 @@ class World(object):
     def __init__(self):
         self.waypoints = []
         self.tracker = []
+        self.tori = []
         self.x = None
         self.y = None
         self.z = None
 
-    def torus_at(self, n):
-        distance = TORUS_DISTANCE + .0
+    def generate_tori(self, iz=10):
+        for w0, w1 in zip(self.waypoints[:-1], self.waypoints[1:]):
+            x0, y0, z0 = w0
+            x1, y1, z1 = w1
+            dx, dy, dz = x1 - x0, y1 - y0, z1 - z0
+            tori = dz / iz
+            ix = (dx + .0) / tori
+            iy = (dy + .0) / tori
+            x, y, z = w0
 
-        zs = map(itemgetter(2), self.waypoints)
-        index = bisect_left(zs, n * distance)
-        if index < 1 or index > len(zs) - 2:
-            return None
-        w0, w1 = self.waypoints[index - 1:index + 1]
-
-        x0, y0, z0 = w0
-        x1, y1, z1 = w1
-
-        dx, dy, dz = x1 - x0, y1 - y0, z1 - z0
-
-        s = abs(dz / distance)
-        dn = n - z0 / distance
-
-        nx = x0 + (dx / s * dn)
-        ny = y0 + (dy / s * dn)
-        nz = z0 + (dz / s * dn)
-
-        def r(n):
-            # This makes me cry at how horribly beautiful it is
-            return int(hashlib.md5(str(nz * n)).hexdigest()[-8:], 16) % 5
-
-        nx += r(nx)
-        ny += r(ny)
-
-        return nx, ny, nz
+            for i in xrange(tori):
+                dx = 2 + z / 15000
+                dy = min(dx, z / 8000)
+                self.tori.append((random.gauss(x, dx), random.gauss(y, dy)))
+                x += ix
+                y += iy
+                z += iz
