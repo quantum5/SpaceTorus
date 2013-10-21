@@ -78,6 +78,7 @@ def load_world(file):
             roll = e(info.get('roll', 0))
             delta = e(info.get('delta', 5))
             radius = e(info.get('radius', None))
+            background = info.get('background', False)
 
             cheap, skip, texture = get_best_texture(texture, optional=info.get('optional', False))
             if skip:
@@ -96,12 +97,14 @@ def load_world(file):
                 cloud_texture = atmosphere_data.get('cloud_texture', None)
                 cheap, _, cloud_texture = get_best_texture(cloud_texture)
                 if not cheap:
-                    cloudmap_id = compile(sphere, radius + 2, int(radius / 2), int(radius / 2), cloud_texture, lighting=False)
+                    cloudmap_id = compile(sphere, radius + 2, int(radius / 2), int(radius / 2), cloud_texture,
+                                          lighting=False)
                 cheap, _, atm_texture = get_best_texture(atm_texture)
                 if not cheap:
                     atmosphere_id = compile(disk, radius, radius + size, 30, atm_texture)
 
-            world.tracker.append(Planet(planet_id, (x, y, z), (pitch, yaw, roll), delta=delta, atmosphere=atmosphere_id, cloudmap=cloudmap_id))
+            world.tracker.append(Planet(planet_id, (x, y, z), (pitch, yaw, roll), delta=delta,
+                                        atmosphere=atmosphere_id, cloudmap=cloudmap_id, background=background))
             if 'ring' in info:
                 ring_data = info['ring']
                 texture = ring_data.get('texture', None)
@@ -123,6 +126,9 @@ class World(object):
     def __init__(self):
         self.waypoints = []
         self.tracker = []
+        self.x = None
+        self.y = None
+        self.z = None
 
     def torus_at(self, n):
         distance = TORUS_DISTANCE + .0

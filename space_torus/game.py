@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from operator import attrgetter
 import sys
 
 from camera import Camera
@@ -37,6 +38,13 @@ TORI_COUNT = 100        # How many tori to spawn
 
 MAX_DELTA = 5
 SEED = int(time.time())
+
+
+def entity_distance(x0, y0, z0):
+    def distance(entity):
+        x1, y1, z1 = entity.location
+        return hypot(hypot(x1 - x0, y1 - y0), z1 - z0)
+    return distance
 
 
 class Applet(pyglet.window.Window):
@@ -235,28 +243,31 @@ class Applet(pyglet.window.Window):
         glLoadIdentity()
 
         c = self.cam
+        x, y, z = c.x, c.y, c.z
         glRotatef(c.pitch, 1, 0, 0)
         glRotatef(c.yaw, 0, 1, 0)
         glRotatef(c.roll, 0, 0, 1)
-        glTranslatef(-c.x, -c.y, -c.z)
+        glTranslatef(-x, -y, -z)
 
         if self.world.waypoints and self.debug:
             glDisable(GL_LIGHTING)
             glPushAttrib(GL_LINE_BIT | GL_CURRENT_BIT)
             glColor3f(0, 1, 0)
             glLineWidth(3)
-            glBegin(GL_LINES)
-            last = self.world.waypoints[0]
+            glBegin(GL_LINE_STRIP)
             for waypoint in self.world.waypoints:
-                glVertex3f(*last)
                 glVertex3f(*waypoint)
-                last = waypoint
             glEnd()
             glPopAttrib()
 
         glEnable(GL_LIGHTING)
         glEnable(GL_BLEND)
-        for entity in self.world.tracker:
+        world = self.world
+        if x != world.x or y != world.y or z != world.z:
+            world.tracker.sort(key=entity_distance(x, y, z), reverse=True)
+            world.tracker.sort(key=attrgetter('background'), reverse=True)
+            world.x, world.y, world.z = x, y, z
+        for entity in world.tracker:
             x, y, z = entity.location
             pitch, yaw, roll = entity.rotation
 
@@ -283,11 +294,10 @@ class Applet(pyglet.window.Window):
             glPopAttrib()
             glPopMatrix()
 
-            if hasattr(entity, "atmosphere") and entity.atmosphere:
+            if hasattr(entity, 'atmosphere') and entity.atmosphere:
                 glPushMatrix()
                 x0, y0, z0 = entity.location
-                x1, y1, z1 = self.cam.x, self.cam.y, self.cam.z
-                dx, dy, dz = x1 - x0, y1 - y0, z1 - z0
+                dx, dy, dz = x - x0, y - y0, z - z0
 
                 distance = sqrt(dz * dz + dx * dx)
                 pitch = (360 - degrees(atan2(dy, distance)))
@@ -310,16 +320,14 @@ class Applet(pyglet.window.Window):
             for pointer, err in dict(self.overlays).iteritems():
                 err = pointer(err)
                 if not err:
-                    #pass
                     self.overlays.pop(pointer, None)
                 else:
                     self.overlays[pointer] = err
 
             progress_bar(5, 5, 10, 2, min((len(self.points) / float((len(self.world.waypoints) * 100))) * 100, 100), type=VERTICAL)
 
-            x, y, z = self.cam.x, self.cam.y, self.cam.z
             self.label.text = '%d FPS @ (x=%.2f, y=%.2f, z=%.2f) # %s: %s points' % (
-                self.fps, x, y, z, self.speed, len(self.points) + 20 - len(self.missed) * 10)
+                self.fps, c.x, c.y, c.z, self.speed, len(self.points) + 20 - len(self.missed) * 10)
             self.label.draw()
 
             glPushAttrib(GL_CURRENT_BIT | GL_LINE_BIT)

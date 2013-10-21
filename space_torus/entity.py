@@ -1,9 +1,10 @@
 class Entity(object):
-    def __init__(self, id, location, rotation=(0, 0, 0), direction=(0, 0, 0)):
+    def __init__(self, id, location, rotation=(0, 0, 0), direction=(0, 0, 0), background=False):
         self.id = id
         self.location = location
         self.rotation = rotation
         self.direction = direction
+        self.background = background
 
     def update(self):
         x, y, z = self.location

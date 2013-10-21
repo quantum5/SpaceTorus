@@ -78,7 +78,8 @@
       "pitch": 90,
       "yaw": 30,
       "roll": 180,
-      "delta": 0
+      "delta": 0,
+      "background": true
     }
   },
   "waypoints": [
