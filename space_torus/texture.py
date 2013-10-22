@@ -49,18 +49,20 @@ cache = {}
 
 max_texture = None
 power_of_two = None
-filter = GL_LINEAR
+badcard = False
 
 
 def init():
-    global max_texture, power_of_two, filter
+    global max_texture, power_of_two, badcard
 
     if max_texture is None:
         buf = c_int()
         glGetIntegerv(GL_MAX_TEXTURE_SIZE, byref(buf))
         max_texture = buf.value
-        if max_texture <= 1024:
-            filter = GL_NEAREST
+        badcard = gl_info.get_renderer() in ('GDI Generic',)
+        if badcard:
+            import warnings
+            warnings.warn('Please update your graphics drivers if possible')
 
     if power_of_two is None:
         power_of_two = gl_info.have_version(2) or gl_info.have_extension('GL_ARB_texture_non_power_of_two')
@@ -198,7 +200,7 @@ def load_texture(file):
 
     glBindTexture(GL_TEXTURE_2D, id)
 
-    #Load textures with no filtering. Filtering generally makes the texture blur.
+    filter = GL_NEAREST if badcard else GL_LINEAR
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter)
     glTexImage2D(GL_TEXTURE_2D, 0, mode, width, height, 0, mode, GL_UNSIGNED_BYTE, texture)

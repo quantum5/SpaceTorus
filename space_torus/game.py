@@ -10,7 +10,7 @@ try:
 except ImportError:
     from model import *
 from world import *
-
+import texture
 
 try:
     from pyglet.gl import *
@@ -134,12 +134,15 @@ class Applet(pyglet.window.Window):
         glClearColor(0, 0, 0, 1)
         glClearDepth(1.0)
 
-        #glEnable(GL_BLEND)
-        #glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        #glEnable(GL_LINE_SMOOTH)
-        #glEnable(GL_POLYGON_SMOOTH)
-        #glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-        #glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
+        texture.init()
+        if not texture.badcard:
+            print 'Not bad card'
+            glEnable(GL_BLEND)
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+            glEnable(GL_LINE_SMOOTH)
+            glEnable(GL_POLYGON_SMOOTH)
+            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+            glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
 
         glAlphaFunc(GL_GEQUAL, 0.9)
         glDepthFunc(GL_LEQUAL)
